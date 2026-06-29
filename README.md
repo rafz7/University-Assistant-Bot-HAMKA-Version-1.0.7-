@@ -74,8 +74,8 @@ uhamka-bot/
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/yourusername/uhamka-bot.git
-cd uhamka-bot
+git clone https://github.com/rafz7/University-Assistant-Bot-HAMKA-Version-1.0.7-
+cd University-Assistant-Bot-HAMKA-Version-1.0.7-
 npm install
 ```
 
