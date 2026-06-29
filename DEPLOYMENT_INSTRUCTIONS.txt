@@ -1,0 +1,277 @@
+================================================================
+  UHAMKA DIGITAL CAMPUS ASSISTANT - DEPLOYMENT INSTRUCTIONS
+================================================================
+Owner: @ravzxz
+Version: 1.0.0
+Node.js: 20 LTS (compatible with 24 LTS)
+================================================================
+
+DAFTAR ISI
+----------
+1. Persiapan API Keys
+2. Konfigurasi .env
+3. Deploy Docker (Direkomendasikan)
+4. Deploy PM2 (VPS/Ubuntu)
+5. Deploy Pterodactyl Panel
+6. Perintah Bot
+7. Troubleshooting
+
+================================================================
+1. PERSIAPAN API KEYS
+================================================================
+
+A. TELEGRAM BOT TOKEN
+   1. Buka Telegram, cari @BotFather
+   2. Ketik /newbot
+   3. Masukkan nama: UHAMKA Digital Campus Assistant
+   4. Masukkan username: uhamka_campus_bot (sesuaikan)
+   5. Salin token → TELEGRAM_BOT_TOKEN
+
+B. GEMINI API KEY (GRATIS)
+   1. Buka: https://aistudio.google.com/app/apikey
+   2. Klik "Create API key"
+   3. Salin → GEMINI_API_KEY_1
+   4. Ulangi untuk GEMINI_API_KEY_2, _3 (akun berbeda)
+
+C. GROQ API KEY (GRATIS)
+   1. Buka: https://console.groq.com
+   2. Sign up → API Keys → Create
+   3. Salin → GROQ_API_KEY_1, _2, _3
+
+D. OWNER TELEGRAM ID
+   1. Buka @userinfobot di Telegram
+   2. Kirim /start
+   3. Salin Your ID → OWNER_TELEGRAM_ID
+
+================================================================
+2. KONFIGURASI .env
+================================================================
+
+cp .env.example .env
+nano .env  (atau edit dengan text editor)
+
+Wajib diisi:
+  TELEGRAM_BOT_TOKEN=xxx
+  DATABASE_URL=postgresql://user:pass@host:5432/uhamka_bot
+  JWT_SECRET=minimal-32-karakter-acak-disini
+  ENCRYPTION_KEY=minimal-32-karakter-acak-disini
+  OWNER_TELEGRAM_ID=id-telegram-anda
+  GEMINI_API_KEY_1=xxx  (minimal 1 AI provider)
+
+Opsional tapi direkomendasikan:
+  GEMINI_API_KEY_2=xxx
+  GEMINI_API_KEY_3=xxx
+  GROQ_API_KEY_1=xxx
+  GROQ_API_KEY_2=xxx
+  GROQ_API_KEY_3=xxx
+
+================================================================
+3. DEPLOY DOCKER (DIREKOMENDASIKAN)
+================================================================
+
+Prasyarat: Docker + Docker Compose terinstall
+
+# Step 1: Clone/upload project
+cd /opt
+mkdir uhamka-bot && cd uhamka-bot
+# Upload semua file ke folder ini
+
+# Step 2: Konfigurasi
+cp .env.example .env
+nano .env  ← Isi API keys
+
+# Step 3: Build & start
+docker-compose up -d --build
+
+# Cek status
+docker-compose ps
+docker-compose logs -f bot
+
+# Restart bot saja
+docker-compose restart bot
+
+# Stop semua
+docker-compose down
+
+# Update setelah perubahan code
+docker-compose down
+docker-compose up -d --build
+
+================================================================
+4. DEPLOY PM2 (VPS/Ubuntu)
+================================================================
+
+Prasyarat:
+  - Ubuntu 20.04+
+  - Node.js 20+
+  - PostgreSQL
+  - Redis
+
+# Install Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install PM2
+npm install -g pm2
+
+# Install PostgreSQL
+sudo apt install postgresql postgresql-contrib -y
+sudo -u postgres psql -c "CREATE USER uhamka WITH PASSWORD 'uhamka123';"
+sudo -u postgres psql -c "CREATE DATABASE uhamka_bot OWNER uhamka;"
+
+# Install Redis
+sudo apt install redis-server -y
+sudo systemctl enable redis-server
+
+# Setup project
+cd /opt
+git clone <repo-url> uhamka-bot  (atau upload manual)
+cd uhamka-bot
+npm install
+cp .env.example .env
+nano .env  ← Isi konfigurasi
+
+# Database setup
+npx prisma generate
+npx prisma migrate deploy
+
+# Build & start
+npm run build
+pm2 start ecosystem.config.js --env production
+pm2 save
+pm2 startup  ← Jalankan perintah yang muncul
+
+# Monitor
+pm2 status
+pm2 logs uhamka-bot
+pm2 monit
+
+================================================================
+5. DEPLOY PTERODACTYL PANEL
+================================================================
+
+A. Buat Server Baru
+   - Nest: Node.js
+   - Docker Image: ghcr.io/pterodactyl/yolks:nodejs_20
+   - Memory: 512MB+ (rekomendasi 1GB)
+   - Storage: 2GB+
+
+B. Startup Configuration
+   Startup Command:
+   npm install && npx prisma generate && npx prisma migrate deploy && npm run build && npm start
+
+C. Environment Variables di Panel (tab Startup)
+   Isi semua variabel dari .env.example
+   DATABASE_URL harus mengarah ke PostgreSQL eksternal
+
+D. Upload Files
+   Upload seluruh isi folder uhamka-bot/ ke /home/container/
+   JANGAN upload: node_modules/, dist/, .env, logs/
+
+E. Start Server
+   Klik Start di Panel
+
+F. Database Eksternal
+   Gunakan layanan seperti:
+   - Supabase (gratis): https://supabase.com
+   - Railway: https://railway.app
+   - ElephantSQL: https://elephantsql.com
+   Salin connection string ke DATABASE_URL
+
+================================================================
+6. PERINTAH BOT LENGKAP
+================================================================
+
+MENU UTAMA (Keyboard)
+---------------------
+🏫 UHAMKA       → Info kampus, fakultas, beasiswa
+🎓 Akademik     → Tugas, jadwal kuliah
+📊 Transkrip    → Nilai, IPS/IPK
+📖 Repository   → Skripsi, jurnal, sitasi
+🤖 AI Assistant → Tutor, writing, quiz
+📄 Analisis File → Upload PDF/DOCX untuk dianalisis
+📖 Al-Qur'an   → Baca, cari ayat, tafsir
+🕌 Islami       → Shalat, dzikir, doa
+📈 Habit Tracker → Tracking ibadah & kebiasaan
+💼 Karir        → CV, interview, beasiswa
+🌍 Bahasa       → English, Arab, German
+📊 Dashboard    → Ringkasan harian
+⚙️ Pengaturan   → Konfigurasi personal
+📞 Support      → Hubungi @ravzxz
+
+COMMANDS
+--------
+/start          → Menu utama + foto logo UHAMKA
+/help           → Bantuan lengkap
+/dashboard      → Dashboard personal
+/tugas          → Manajemen tugas
+/addtask        → Tambah tugas (format lihat /help)
+/jadwal         → Jadwal kuliah hari ini
+/transkrip      → Menu transkrip
+/addnilai       → Input nilai baru
+/quran          → Al-Qur'an Center
+/surah [n]      → Baca surah nomor n
+/ayah [s:a]     → Baca ayat (contoh: /ayah 2:255)
+/shalat         → Jadwal shalat hari ini
+/habit          → Habit tracker
+/ai             → AI Assistant menu
+/cari [query]   → Cari info UHAMKA
+/cariskripsi    → Cari di repository
+/sitasi         → Generate sitasi
+/translate      → Terjemahkan teks
+/buatcv         → Buat CV dengan AI
+/interview      → Persiapan interview
+/topikpenelitian → Rekomendasi topik riset
+/settings       → Pengaturan
+
+ADMIN ONLY
+----------
+/admin          → Panel admin (owner only)
+/broadcast      → Broadcast ke semua user
+/blockuser [id] → Blokir pengguna
+/unblockuser    → Unblokir pengguna
+
+================================================================
+7. TROUBLESHOOTING
+================================================================
+
+❌ Bot tidak merespons
+   → Cek TELEGRAM_BOT_TOKEN di .env
+   → Cek logs: docker-compose logs bot atau pm2 logs
+   → Pastikan bot tidak di-block oleh Telegram
+
+❌ Database error
+   → Cek DATABASE_URL di .env
+   → Jalankan: npx prisma migrate deploy
+   → Cek koneksi PostgreSQL
+
+❌ AI tidak merespons
+   → Cek GEMINI_API_KEY atau GROQ_API_KEY di .env
+   → Minimal 1 provider harus aktif
+   → Cek quota API key
+
+❌ Redis error (non-fatal)
+   → Bot tetap berjalan tanpa Redis
+   → Cache tidak aktif = sedikit lebih lambat
+   → Install/nyalakan Redis untuk performa optimal
+
+❌ Build error "Cannot find module"
+   → Jalankan: npm install
+   → Pastikan Node.js versi 20+
+
+❌ Prisma error
+   → Jalankan: npx prisma generate
+   → Lalu: npx prisma migrate deploy
+
+Health Check:
+   curl http://localhost:3000/health
+
+Logs:
+   Docker: docker-compose logs -f bot
+   PM2:    pm2 logs uhamka-bot
+   File:   ./logs/combined-YYYY-MM-DD.log
+
+================================================================
+  Dibuat dengan ❤️ untuk mahasiswa UHAMKA
+  Owner: @ravzxz | uhamka.ac.id
+================================================================

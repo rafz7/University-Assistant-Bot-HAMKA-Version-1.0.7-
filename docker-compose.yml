@@ -1,0 +1,76 @@
+version: '3.9'
+
+services:
+  bot:
+    build: .
+    container_name: uhamka-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://uhamka:${POSTGRES_PASSWORD:-uhamka123}@postgres:5432/uhamka_bot
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - uhamka-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: uhamka-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: uhamka_bot
+      POSTGRES_USER: uhamka
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uhamka123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uhamka -d uhamka_bot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uhamka-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: uhamka-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uhamka-net
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: uhamka-qdrant
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - uhamka-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+
+networks:
+  uhamka-net:
+    driver: bridge

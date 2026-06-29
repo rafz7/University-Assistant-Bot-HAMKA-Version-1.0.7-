@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  telegramId   String   @unique
+  username     String?
+  firstName    String
+  lastName     String?
+  languageCode String   @default("id")
+  isActive     Boolean  @default(true)
+  isBlocked    Boolean  @default(false)
+  role         String   @default("STUDENT")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile        AcademicProfile?
+  tasks          Task[]
+  schedules      Schedule[]
+  transcripts    Transcript[]
+  notes          Note[]
+  habits         HabitLog[]
+  quranBookmarks QuranBookmark[]
+  conversations  Conversation[]
+  settings       UserSettings?
+  careerProfile  CareerProfile?
+  achievements   Achievement[]
+  auditLogs      AuditLog[]
+
+  @@index([telegramId])
+  @@map("users")
+}
+
+model AcademicProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nim         String?
+  faculty     String?
+  program     String?
+  semester    Int      @default(1)
+  targetGpa   Float?
+  currentGpa  Float?
+  angkatan    Int?
+  advisorName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("academic_profiles")
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  subject     String?
+  type        String   @default("ASSIGNMENT")
+  priority    String   @default("MEDIUM")
+  status      String   @default("PENDING")
+  dueDate     DateTime?
+  reminderAt  DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("tasks")
+}
+
+model Schedule {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  day       String
+  startTime String
+  endTime   String
+  room      String?
+  lecturer  String?
+  type      String   @default("LECTURE")
+  semester  Int      @default(1)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("schedules")
+}
+
+model Transcript {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject    String
+  code       String?
+  credits    Int
+  grade      String
+  gradePoint Float
+  semester   Int
+  year       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@map("transcripts")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  category  String?
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("notes")
+}
+
+model HabitLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  shalat    Boolean  @default(false)
+  tilawah   Boolean  @default(false)
+  dzikir    Boolean  @default(false)
+  tahajud   Boolean  @default(false)
+  puasa     Boolean  @default(false)
+  belajar   Boolean  @default(false)
+  olahraga  Boolean  @default(false)
+  xpEarned  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("habit_logs")
+}
+
+model QuranBookmark {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  surahNumber Int
+  ayahNumber  Int
+  surahName   String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("quran_bookmarks")
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent     String   @default("general")
+  messages  String
+  summary   String?
+  tokens    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("conversations")
+}
+
+model UserSettings {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language         String   @default("id")
+  timezone         String   @default("Asia/Jakarta")
+  prayerReminder   Boolean  @default(true)
+  taskReminder     Boolean  @default(true)
+  dailyQuote       Boolean  @default(true)
+  notificationTime String   @default("07:00")
+  city             String   @default("Jakarta")
+  updatedAt        DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model CareerProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetJob      String?
+  skills         String   @default("[]")
+  experiences    String?
+  education      String?
+  cvData         String?
+  portfolioLinks String   @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("career_profiles")
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  description String?
+  badge       String?
+  xp          Int      @default(0)
+  earnedAt    DateTime @default(now())
+
+  @@index([userId])
+  @@map("achievements")
+}
+
+model KnowledgeDocument {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  source    String
+  category  String
+  url       String?
+  vectorId  String?  @unique
+  metadata  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("knowledge_documents")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  resource  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_configs")
+}
